@@ -1,0 +1,87 @@
+plugins {
+	id 'com.android.application'
+}
+def buildDate = new Date().format("yyyy-MMdd-HHmm")
+
+android {
+	applicationVariants.all { variant ->
+		variant.outputs.all { output ->
+			def appFileName = "CodeEditText-" + buildDate + ".apk"
+			outputFileName = appFileName;
+		}
+	}
+
+	signingConfigs {
+		testKey {
+			storeFile file('testkey.jks')
+			storePassword 'testkey'
+			keyAlias 'testkey'
+			keyPassword 'testkey'
+		}
+	}
+	buildToolsVersion '33.0.1'
+	namespace app.namespace
+	compileSdk app.compileSdk
+
+	defaultConfig {
+		applicationId app.applicationId
+		minSdk app.minSdk
+		targetSdk app.targetSdk
+		versionCode app.versionCode
+		versionName app.versionName
+		multiDexEnabled true
+	}
+
+	sourceSets {
+		main {
+			java.srcDirs = ['src/main/java']
+			resources.srcDirs = ['src/main/java', 'src/main/resources']
+		}
+	}
+
+	compileOptions {
+		coreLibraryDesugaringEnabled = true
+		sourceCompatibility javaVersion.sourceCompatibility
+		targetCompatibility javaVersion.targetCompatibility
+	}
+
+	buildFeatures {
+		viewBinding true
+		aidl true
+	}
+
+	packagingOptions {
+		exclude 'androidsupportmultidexversion.txt'
+		exclude 'META-INF/**.version'
+		exclude 'XPP3_1.1.4c_VERSION'
+		exclude 'org/jf/**'
+		exclude 'org/antlr/**'
+	}
+
+	buildTypes {
+		debug {
+			shrinkResources false
+			minifyEnabled false
+			proguardFiles 'proguard-rules.pro'
+			signingConfig signingConfigs.testKey
+		}
+
+		release {
+			shrinkResources true
+			minifyEnabled true
+			proguardFiles 'proguard-rules.pro'
+			signingConfig signingConfigs.testKey
+		}
+	}
+}
+
+dependencies {
+	implementation fileTree(dir: 'libs', include: ['*.jar'])
+	coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.0'
+	implementation lib.androidx_multidex
+	implementation lib.androidx_preference
+	implementation lib.android_material
+	implementation project(':editor')
+// https://mvnrepository.com/artifact/org.antlr/antlr4-runtime
+	implementation 'org.antlr:antlr4-runtime:4.11.1'
+}

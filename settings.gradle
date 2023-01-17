@@ -1,0 +1,3 @@
+rootProject.name = "CodeEditText"
+include ':app'
+include ':editor'
