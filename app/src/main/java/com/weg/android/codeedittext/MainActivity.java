@@ -21,6 +21,7 @@ public class MainActivity extends AppCompatActivity {
 		super.onCreate(savedInstanceState);
 		view = new EditorView(this);
 		setContentView(view);
+		//view.setColorScheme(new ColorSchemeDark());
 		LanguageService.getInstance().init(this, view);
 		LanguageService.getInstance().addSupport(new TypeScriptFileSupport());
 		openFile("pieceTreeBase.ts");

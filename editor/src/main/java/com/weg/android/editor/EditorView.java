@@ -102,8 +102,8 @@ public class EditorView extends Component {
 	private int lastCaretLine;
 	private int lastCaretColumn;
 	
-	private int caretLine;
-	private int caretColumn;
+	private int caretLine = 0;
+	private int caretColumn = 0;
 	private int caretX;
 	private int caretY;
 	
@@ -248,7 +248,7 @@ public class EditorView extends Component {
 	}
 	
 	public int getPosition(int line, int column) {
-		int len=getLineLength(line);
+		int len = getLineLength(line);
 		return getLineStart(line) + Math.min(column, len);
 	}
 	
@@ -654,10 +654,9 @@ public class EditorView extends Component {
 	
 	@Override
 	protected void onRedraw(Canvas canvas, Rect bounds) {
-		long startTime = System.currentTimeMillis();
-		if (colorScheme.getBackgroundColor() != 0) {
+		if (colorScheme.getBackgroundColor() != 0)
 			canvas.drawColor(colorScheme.getBackgroundColor());
-		}
+		
 		lastHighlightIndex = 0;
 		int firstLine = bounds.top / fontHeight;
 		int lastLine = (bounds.bottom - 1) / fontHeight;
@@ -666,25 +665,28 @@ public class EditorView extends Component {
 		int x = sideBarWidth;
 		int y = (firstLine + 1) * fontHeight;
 		for (int line = firstLine; line < lastLine; line++) {
-			Log.d(TAG, "onRedraw: line:" + line);
 			int start = getLineStart(line);
 			int length = getLineLength(line);
 			redrawLine(canvas, bounds, line, start, length, x, y);
 			y += fontHeight;
 		}
-		Log.d(TAG, "onRedraw: " + (System.currentTimeMillis() - startTime));
 	}
 	
 	protected void redrawLine(Canvas canvas, Rect bounds, int line, int start, int length, int x, int y) {
 		int end = start + length;
+		if (editable && !selectionMode && caretLineVisible && caretLine == line && colorScheme.getCaretLineColor() != 0) {
+			painter.setColor(colorScheme.getCaretLineColor());
+			canvas.drawRect(x, y - fontTop, bounds.right, y + fontBottom, painter);
+		}
+		
 		if (lineNumberVisible && colorScheme.getLineNumberColor() != 0) {
 			if (line == caretLine && colorScheme.getCaretLineNumberColor() != 0)
 				painter.setColor(colorScheme.getCaretLineNumberColor());
 			else
 				painter.setColor(colorScheme.getLineNumberColor());
-			
 			canvas.drawText(Integer.toString(line + 1), monoAdvance, y, painter);
 		}
+		
 		int textColor = colorScheme.getForegroundColor();
 		int textOffset = start;
 		if (highlighting != null) {
@@ -698,20 +700,19 @@ public class EditorView extends Component {
 				for (int i = findIndex; i < highlighting.highlights.length; i++) {
 					Highlight highlight = highlighting.highlights[i];
 					if (highlight.startIndex > end) break;
-					int spanStart = highlight.startIndex;
-					int spanEnd = highlight.stopIndex;
-					if (spanStart < textOffset)
-						spanStart = textOffset;
-					if (spanEnd > end)
-						spanEnd = end;
+					int spanStart = max(textOffset, highlight.startIndex);
+					int spanEnd = min(end, highlight.stopIndex);
+					
 					if (spanStart > textOffset) {
 						resetPainter();
 						painter.setColor(textColor);
-						x += drawText(canvas, textOffset, spanStart, x, y);
+						if (textColor == 0)
+							x += measureText(textOffset, spanStart);
+						else
+							x += drawText(canvas, textOffset, spanStart, x, y);
 					}
 					
 					TextStyle style = colorScheme.getStyle(highlight.type);
-					
 					if (style != null) {
 						applyPainter(style);
 						int foregroundColor = style.foregroundColor;
@@ -720,9 +721,13 @@ public class EditorView extends Component {
 						else
 							painter.setColor(textColor);
 					}
-					x += drawText(canvas, spanStart, spanEnd, x, y);
+					if (painter.getColor() == 0)
+						x += measureText(spanStart, spanEnd);
+					else
+						x += drawText(canvas, spanStart, spanEnd, x, y);
 					textOffset = spanEnd;
 					lastHighlightIndex = i;
+					resetPainter();
 				}
 			}
 		}
@@ -730,9 +735,11 @@ public class EditorView extends Component {
 		if (textOffset < end) {
 			if (colorScheme.getForegroundColor() != 0) {
 				painter.setColor(colorScheme.getForegroundColor());
-				drawText(canvas, textOffset, end, x, y);
-			}
+				x += drawText(canvas, textOffset, end, x, y);
+			} else
+				x += measureText(textOffset, end);
 		}
+		
 	}
 	
 	private void resetPainter() {
